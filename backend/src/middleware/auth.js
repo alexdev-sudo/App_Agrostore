@@ -2,7 +2,7 @@
 const jwt = require('jsonwebtoken');
 
 // verifica el token JWT: se usa asi en cualquier ruta que requiera autenticacion
-const verficarToken = (req, res, next) => {
+const verificarToken = (req, res, next) => {
     // frontend manda el token en el header "Authorization"
     const authHeader = req.headers['authorization'];
     const token  = authHeader && authHeader.split(' ')[1]; // "Bearer TOKEN
@@ -33,4 +33,4 @@ const verificarRol = (...roles) => (req,res,next) =>{
         });
 }next();
 };
-module.exports = {verficarToken, verificarRol};
+module.exports = {verificarToken, verificarRol};

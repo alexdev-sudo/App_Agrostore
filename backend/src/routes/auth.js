@@ -1,7 +1,7 @@
 // auth.js - rutas de registro e inicio de sesion
 const express = require('express');
-const router = express.router();
-const bcrypt = require('bcrypt');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db'); // conexion a postgreSQL
 const {verificarToken} = require('../middleware/auth'); // middleware para proteger rutas
@@ -10,32 +10,33 @@ const {verificarToken} = require('../middleware/auth'); // middleware para prote
 // crea una nueva cuenta de usuario  
 
 router.post('/registro', async (req,res) => {
-    const{nombre, telefono,tipo,constrasena, ubicacion} = req.body;
+    const{nombre, telefono,tipo,contrasena, ubicacion} = req.body;
 
     // validacion: todos los campos obligatorios debe estar presentes
-if(!nombre || !telefono || !tipo || !constrasena ) {
+if(!nombre || !telefono || !tipo || !contrasena ) {
     return res.status(400).json({
-        error: 'por favor completa todos los campos: nombre , telefono, tipo y constrasena'
+        error: 'por favor completa todos los campos: nombre , telefono, tipo y contrasena'
     });
 }
 
 // solo se permiten estos dos roles al registrarse 
 // administrador solo puede ser creado directamente en la DB
 
-if(!['productor','consumidor'].includes(tipo)) {
+if(!['Productor','Comprador'].includes(tipo)) {
     return res.status(400).json({ 
-        error: 'tipo de usuario no validodebe ser productor o comprador'
+        error: 'tipo de usuario no valido debe ser productor o comprador'
     });
 }
 
-// bcrypt.hash (texto,rondas) - 10 rondas 
-// mas rondas =  mas seguro pero mas lento 
-const hash = await bcrypt.hash(contrasena, 10);
-
 try {
+    // bcrypt.hash (texto,rondas) - 10 rondas 
+    // mas rondas =  mas seguro pero mas lento 
+    const hash = await bcrypt.hash(contrasena, 10);
+
     const result = await db.query(
        `INSERT INTO usuario(nombre, telefono,tipo,contrasena,ubicacion)
-        VALUES($1,$2,$3,$4,$5) RETURNING id_usuario, nombre, tipo`,
+        VALUES($1,$2,$3,$4,$5)
+        RETURNING id_usuario, nombre, tipo`,
         [nombre, telefono,tipo,hash,ubicacion || null ]
     );
 
@@ -44,6 +45,7 @@ try {
         mensaje: 'Cuenta creada exitosamente!!',
         usuario: result.rows[0] // {id_usuario, nombre, tipo}
     });
+     
 }catch(err) {
     //codigo 23505 en postgreSQL  = violacion de UNIQUE(Telefono duplicado)
     if(err.code === '23505') {
@@ -53,8 +55,7 @@ try {
     }
     console.error(err);
     res.status(500).json({
-        error: 'error al crear la cuenta, por favor intente nuevamente'
-    });
+        error: 'error al crear la cuenta, por favor intente nuevamente'});
 }
 
 });
@@ -68,6 +69,7 @@ if (!telefono || !contrasena) {
     return res.status(400).json({
         error: 'Telefono y contrasena son obligatorios'});
 }
+
 try{
     const result = await db.query(
         'SELECT * FROM usuario WHERE telefono = $1 AND activo = true',
@@ -78,6 +80,7 @@ try{
             error: 'No encontramos una cuenta con ese numero de telefono'
         });
     }
+
     const usuario = result.rows[0]; // {id_usuario, nombre, tipo, contrasena: hash}
 
     //bcrypt.compare COMPARA ;"1234" con el hash guardad en la DB
@@ -85,8 +88,7 @@ try{
     const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
     if (!contrasenaValida) {
         return res.status(401).json({
-            error: 'Contrasena Incorrecta'
-        });
+            error: 'Contrasena Incorrecta' });
 }
 // creamos el token con los datos minimos necesarios
 //Nunca incluimos la contresena en el token
@@ -113,8 +115,7 @@ res.json({
 }catch(err){
     console.error(err);
     res.status(500).json({
-        error: 'Error del servicio'
-    });
+        error: 'Error del servicio'});
 }
 });
 
