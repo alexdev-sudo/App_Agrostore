@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estas tres líneas activan Tailwind.
+   base: estilos de reset (márgenes en 0, box-sizing, etc.)
+   components: clases de componentes personalizados
+   utilities: todas las clases de Tailwind (flex, text-verde, etc.) */
+
+body {
+  background-color: #F5F0E8;
+  /* Color crema del fondo general del Figma */
+  font-family: 'Georgia', serif;
+}
