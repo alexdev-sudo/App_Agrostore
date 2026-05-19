@@ -1,5 +1,9 @@
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path  = require('path');
 // index.js — Servidor principal de AgroStore
 // Este archivo une todas las piezas: middlewares, rutas y el puerto de escucha.
+
 
 const express = require('express');
 const cors    = require('cors');
@@ -24,6 +28,11 @@ app.use(cors({
 // express.json() permite leer req.body en peticiones POST y PATCH.
 // Sin esto, req.body siempre sería undefined.
 app.use(express.json());
+
+const swaggerDocument = YAML.load(
+  path.join(__dirname, '../../docs/api/openapi.yaml')
+);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // ── Rutas ───────────────────────────────────────────────────────────────────
 // Cada "use" conecta un archivo de rutas con un prefijo URL.
