@@ -15,6 +15,7 @@ const verificarToken = (req, res, next) => {
         // jwt.verify lanza error si el token es falso o expiro 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded; // {id,nombrre, tipo}
+        req.usuario = decoded; 
         next(); // todo bien , continua a la ruta    
     }catch(err) {
         res.status(403).json({
