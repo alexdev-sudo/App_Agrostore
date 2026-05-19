@@ -1,0 +1,1738 @@
+openapi: 3.0.3
+info:
+  title: AgroStore API
+  version: 1.0.0
+  description: API REST para la comercializacion agricola AgroStore.
+
+servers:
+  - url: http://localhost:3001
+    description: Servidor local
+
+tags:
+  - name: Salud
+    description: Verificacion del estado del backend.
+  - name: Autenticacion
+    description: Registro, inicio de sesion y perfil del usuario autenticado.
+  - name: Productos
+    description: Publicacion, consulta y administracion de productos agricolas.
+  - name: Pedidos
+    description: Creacion y gestion de pedidos entre compradores y productores.
+  - name: Entregas
+    description: Registro, confirmacion y reporte de problemas en entregas.
+  - name: Notificaciones
+    description: Consulta y marcado de notificaciones del usuario.
+  - name: Administracion
+    description: Endpoints exclusivos para el rol Administrador.
+
+paths:
+  /health:
+    get:
+      tags:
+        - Salud
+      summary: Verificar estado del backend
+      description: Endpoint publico usado para validar que la API esta funcionando.
+      responses:
+        "200":
+          description: Backend funcionando correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: 1.0.0
+                  app:
+                    type: string
+                    example: AgroStore API
+
+  /api/auth/registro:
+    post:
+      tags:
+        - Autenticacion
+      summary: Registrar nuevo usuario
+      description: Crea una cuenta para usuarios con rol Productor o Comprador.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroRequest"
+            example:
+              nombre: Juan Perez
+              telefono: "55551234"
+              tipo: Productor
+              contrasena: "123456"
+              ubicacion: Quetzaltenango
+      responses:
+        "201":
+          description: Cuenta creada exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Cuenta creada exitosamente!!
+                  usuario:
+                    type: object
+                    properties:
+                      id_usuario:
+                        type: integer
+                        example: 2
+                      nombre:
+                        type: string
+                        example: Juan Perez
+                      tipo:
+                        type: string
+                        example: Productor
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: El telefono ya tiene una cuenta registrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Numero de telefono ya tiene una cuenta registrada
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/auth/login:
+    post:
+      tags:
+        - Autenticacion
+      summary: Iniciar sesion
+      description: Valida credenciales y devuelve un token JWT para consumir rutas protegidas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              telefono: "00000000"
+              contrasena: admin123
+      responses:
+        "200":
+          description: Inicio de sesion exitoso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+              example:
+                token: jwt_token
+                usuario:
+                  id: 1
+                  nombre: Administrador AgroStore
+                  tipo: Administrador
+                  ubicacion: La Esperanza
+                  calificacion: "5.0"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/auth/perfil:
+    get:
+      tags:
+        - Autenticacion
+      summary: Obtener perfil del usuario autenticado
+      description: Devuelve los datos basicos del usuario asociado al token JWT.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Perfil del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioPerfil"
+              example:
+                id_usuario: 1
+                nombre: Administrador AgroStore
+                telefono: "00000000"
+                tipo: Administrador
+                ubicacion: La Esperanza
+                calificacion: "5.0"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/productos:
+    get:
+      tags:
+        - Productos
+      summary: Listar productos disponibles
+      description: Lista productos en estado Disponible. Permite filtros por nombre, categoria y rango de precio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: nombre
+          in: query
+          required: false
+          schema:
+            type: string
+          example: tomate
+        - name: categoria
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CategoriaProducto"
+          example: Hortalizas
+        - name: min_precio
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+          example: 2.5
+        - name: max_precio
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+          example: 15
+      responses:
+        "200":
+          description: Lista de productos disponibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoConProductor"
+              example:
+                - id_producto: 1
+                  nombre: Tomate
+                  descripcion: Tomate fresco por libra
+                  cantidad_disponible: 50
+                  precio: "5.00"
+                  estado: Disponible
+                  categoria: Hortalizas
+                  punto_entrega: Mercado central
+                  id_productor: 2
+                  creado_en: "2026-05-19T10:00:00.000Z"
+                  productor_nombre: Juan Perez
+                  productor_rating: "5.0"
+                  productor_ubicacion: Quetzaltenango
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Productos
+      summary: Publicar producto
+      description: Permite a un Productor crear una nueva publicacion de producto agricola.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoRequest"
+            example:
+              nombre: Tomate
+              descripcion: Tomate fresco por libra
+              cantidad_disponible: 50
+              precio: 5
+              punto_entrega: Mercado central
+              categoria: Hortalizas
+      responses:
+        "201":
+          description: Producto publicado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Producto publicado exitosamente
+                  producto:
+                    $ref: "#/components/schemas/Producto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/productos/categorias:
+    get:
+      tags:
+        - Productos
+      summary: Listar categorias de productos
+      description: Devuelve las categorias validas para publicar y filtrar productos.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de categorias.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoriaProducto"
+              example:
+                - Hortalizas
+                - Granos Basicos
+                - Frutas
+                - Hierbas
+                - Otros
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/productos/mis-productos:
+    get:
+      tags:
+        - Productos
+      summary: Listar productos del productor autenticado
+      description: Devuelve los productos creados por el usuario con rol Productor.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Productos del productor autenticado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Producto"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/productos/{id}/stock:
+    patch:
+      tags:
+        - Productos
+      summary: Actualizar stock de producto
+      description: Permite al Productor modificar la cantidad disponible de un producto propio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cantidad
+              properties:
+                cantidad:
+                  type: integer
+                  minimum: 0
+                  example: 40
+            example:
+              cantidad: 40
+      responses:
+        "200":
+          description: Cantidad actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Cantidad actualizada
+                  producto:
+                    $ref: "#/components/schemas/Producto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/productos/{id}/cerrar:
+    patch:
+      tags:
+        - Productos
+      summary: Cerrar publicacion de producto
+      description: Cambia el estado del producto a Cerrado para que deje de aparecer en la tienda.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Publicacion cerrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Publicacion de "Tomate" cerrada
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/productos/{id}:
+    delete:
+      tags:
+        - Productos
+      summary: Eliminar producto
+      description: Permite al Productor eliminar un producto propio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Producto eliminado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Producto "Tomate" eliminado
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/pedidos:
+    post:
+      tags:
+        - Pedidos
+      summary: Crear pedido
+      description: Permite a un Comprador solicitar una cantidad de un producto disponible.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id_producto
+                - cantidad
+              properties:
+                id_producto:
+                  type: integer
+                  example: 1
+                cantidad:
+                  type: integer
+                  minimum: 1
+                  example: 10
+            example:
+              id_producto: 1
+              cantidad: 10
+      responses:
+        "201":
+          description: Pedido registrado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Pedido registrado exitosamente
+                  id_pedido:
+                    type: integer
+                    example: 1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/pedidos/mios:
+    get:
+      tags:
+        - Pedidos
+      summary: Listar pedidos del comprador
+      description: Devuelve los pedidos realizados por el Comprador autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pedidos del comprador.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PedidoComprador"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/pedidos/recibidos:
+    get:
+      tags:
+        - Pedidos
+      summary: Listar pedidos recibidos por el productor
+      description: Devuelve pedidos asociados a productos del Productor autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pedidos recibidos por el productor.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PedidoRecibido"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/pedidos/{id}/aceptar:
+    patch:
+      tags:
+        - Pedidos
+      summary: Aceptar pedido
+      description: Permite a un Productor aceptar un pedido pendiente de uno de sus productos.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Pedido aceptado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Pedido aceptado
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/pedidos/{id}/rechazar:
+    patch:
+      tags:
+        - Pedidos
+      summary: Rechazar pedido
+      description: Permite a un Productor rechazar un pedido pendiente indicando un motivo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MotivoRequest"
+            example:
+              motivo: No hay suficiente producto disponible para la fecha solicitada.
+      responses:
+        "200":
+          description: Pedido rechazado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Pedido rechazado
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/pedidos/{id}/cancelar:
+    patch:
+      tags:
+        - Pedidos
+      summary: Cancelar pedido
+      description: Permite a un Comprador cancelar un pedido propio indicando un motivo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MotivoRequest"
+            example:
+              motivo: Ya no necesito el producto.
+      responses:
+        "200":
+          description: Pedido cancelado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Pedido cancelado
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/entregas:
+    post:
+      tags:
+        - Entregas
+      summary: Registrar entrega
+      description: Registra los datos de entrega para un pedido en estado Aceptado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntregaRequest"
+            example:
+              id_pedido: 1
+              fecha_entrega: "2026-05-20"
+              lugar: Mercado central
+              observaciones: Entrega acordada por la tarde.
+      responses:
+        "201":
+          description: Entrega registrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Entrega registrada
+                  entrega:
+                    $ref: "#/components/schemas/Entrega"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/entregas/mis-entregas:
+    get:
+      tags:
+        - Entregas
+      summary: Listar entregas del productor
+      description: Devuelve entregas relacionadas con productos del Productor autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Entregas del productor.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntregaProductor"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/entregas/mis-recepciones:
+    get:
+      tags:
+        - Entregas
+      summary: Listar recepciones del comprador
+      description: Devuelve entregas pendientes o registradas que debe revisar el Comprador autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Recepciones del comprador.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntregaComprador"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/entregas/{id}/confirmar:
+    patch:
+      tags:
+        - Entregas
+      summary: Confirmar entrega por productor
+      description: Permite al Productor marcar una entrega pendiente como confirmada por productor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Entrega confirmada por productor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Entrega confirmada por productor
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/entregas/{id}/recepcion:
+    patch:
+      tags:
+        - Entregas
+      summary: Confirmar recepcion por comprador
+      description: Permite al Comprador confirmar la recepcion y finalizar el pedido asociado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Recepcion confirmada y pedido finalizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Recepcion confirmada. Pedido finalizado exitosamente.
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/entregas/{id}/incumplimiento:
+    post:
+      tags:
+        - Entregas
+      summary: Reportar incumplimiento
+      description: Registra un problema o incumplimiento relacionado con una entrega.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - descripcion
+              properties:
+                descripcion:
+                  type: string
+                  example: El producto no fue entregado en el lugar acordado.
+            example:
+              descripcion: El producto no fue entregado en el lugar acordado.
+      responses:
+        "201":
+          description: Incumplimiento registrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Incumplimiento registrado. El administrador lo revisara.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/notificaciones:
+    get:
+      tags:
+        - Notificaciones
+      summary: Listar notificaciones
+      description: Devuelve las ultimas 50 notificaciones del usuario autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notificaciones del usuario.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notificacion"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/notificaciones/no-leidas:
+    get:
+      tags:
+        - Notificaciones
+      summary: Contar notificaciones no leidas
+      description: Devuelve el total de notificaciones no leidas del usuario autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Total de notificaciones no leidas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 3
+              example:
+                total: 3
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/notificaciones/leer-todas:
+    patch:
+      tags:
+        - Notificaciones
+      summary: Marcar todas las notificaciones como leidas
+      description: Actualiza todas las notificaciones del usuario autenticado como leidas.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notificaciones marcadas como leidas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Todas las notificaciones marcadas como leidas
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/notificaciones/{id}/leer:
+    patch:
+      tags:
+        - Notificaciones
+      summary: Marcar una notificacion como leida
+      description: Marca una notificacion especifica como leida si pertenece al usuario autenticado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Notificacion marcada como leida.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Notificacion leida
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/usuarios:
+    get:
+      tags:
+        - Administracion
+      summary: Listar usuarios del sistema
+      description: Endpoint exclusivo para Administrador. Devuelve usuarios registrados.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de usuarios.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UsuarioAdmin"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/usuarios/{id}/desactivar:
+    patch:
+      tags:
+        - Administracion
+      summary: Desactivar usuario
+      description: Endpoint exclusivo para Administrador. Cambia el estado activo del usuario a false.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Usuario desactivado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Cuenta de Juan Perez desactivada
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/admin/usuarios/{id}/activar:
+    patch:
+      tags:
+        - Administracion
+      summary: Activar usuario
+      description: Endpoint exclusivo para Administrador. Cambia el estado activo del usuario a true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Usuario reactivado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Cuenta de Juan Perez reactivada
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/admin/pedidos:
+    get:
+      tags:
+        - Administracion
+      summary: Listar pedidos del sistema
+      description: Endpoint exclusivo para Administrador. Permite filtrar pedidos por estado y rango de fechas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EstadoPedido"
+          example: Pendiente
+        - name: desde
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-01-01"
+        - name: hasta
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-12-31"
+      responses:
+        "200":
+          description: Pedidos del sistema.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PedidoAdmin"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/entregas:
+    get:
+      tags:
+        - Administracion
+      summary: Listar entregas del sistema
+      description: Endpoint exclusivo para Administrador. Devuelve las entregas registradas en el sistema.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Entregas del sistema.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntregaAdmin"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/incumplimientos:
+    get:
+      tags:
+        - Administracion
+      summary: Listar incumplimientos reportados
+      description: Endpoint exclusivo para Administrador. Devuelve reportes de incumplimiento.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Incumplimientos registrados.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incumplimiento"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/incumplimientos/{id}/validar:
+    patch:
+      tags:
+        - Administracion
+      summary: Validar incumplimiento
+      description: Endpoint exclusivo para Administrador. Marca un incumplimiento como validado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Incumplimiento validado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeResponse"
+              example:
+                mensaje: Incumplimiento validado
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/admin/reportes/ventas:
+    get:
+      tags:
+        - Administracion
+      summary: Reporte de ventas por productor
+      description: Endpoint exclusivo para Administrador. Resume ventas finalizadas agrupadas por productor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: desde
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-01-01"
+        - name: hasta
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-12-31"
+      responses:
+        "200":
+          description: Reporte de ventas por productor.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReporteVentas"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/reportes/categorias:
+    get:
+      tags:
+        - Administracion
+      summary: Reporte de ventas por categoria
+      description: Endpoint exclusivo para Administrador. Resume ventas finalizadas agrupadas por categoria.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Reporte de ventas por categoria.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReporteCategorias"
+        "401":
+          $ref: "#/components/responses/MissingToken"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Identificador numerico del recurso.
+      schema:
+        type: integer
+        example: 1
+
+  responses:
+    BadRequest:
+      description: Solicitud invalida o datos obligatorios faltantes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Faltan campos obligatorios
+    Unauthorized:
+      description: Credenciales invalidas.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Contrasena Incorrecta
+    MissingToken:
+      description: No se envio token de autenticacion.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Necesitas iniciar sesion para acceder
+    Forbidden:
+      description: Token invalido, expirado o rol no autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            tokenExpirado:
+              value:
+                error: Tu sesion expiro. por favor inicia sesion nuevamente.
+            rolNoAutorizado:
+              value:
+                Error: "esta funcion es solo para: Productor"
+    NotFound:
+      description: Recurso no encontrado o sin permisos sobre el recurso.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Recurso no encontrado
+    InternalServerError:
+      description: Error interno del servidor.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Error interno del servidor
+
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        error:
+          type: string
+          example: Mensaje de error
+
+    MensajeResponse:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          example: Operacion realizada correctamente
+
+    RolUsuario:
+      type: string
+      enum:
+        - Productor
+        - Comprador
+        - Administrador
+      example: Comprador
+
+    CategoriaProducto:
+      type: string
+      enum:
+        - Hortalizas
+        - Granos Basicos
+        - Frutas
+        - Hierbas
+        - Otros
+      example: Hortalizas
+
+    EstadoProducto:
+      type: string
+      enum:
+        - Disponible
+        - Reservado
+        - Cerrado
+      example: Disponible
+
+    EstadoPedido:
+      type: string
+      enum:
+        - Pendiente
+        - Aceptado
+        - Rechazado
+        - Cancelado
+        - Finalizado
+      example: Pendiente
+
+    EstadoEntrega:
+      type: string
+      enum:
+        - Pendiente
+        - Confirmado_Productor
+        - Finalizado
+      example: Pendiente
+
+    RegistroRequest:
+      type: object
+      required:
+        - nombre
+        - telefono
+        - tipo
+        - contrasena
+      properties:
+        nombre:
+          type: string
+          example: Juan Perez
+        telefono:
+          type: string
+          example: "55551234"
+        tipo:
+          type: string
+          enum:
+            - Productor
+            - Comprador
+          example: Productor
+        contrasena:
+          type: string
+          format: password
+          example: "123456"
+        ubicacion:
+          type: string
+          nullable: true
+          example: Quetzaltenango
+
+    LoginRequest:
+      type: object
+      required:
+        - telefono
+        - contrasena
+      properties:
+        telefono:
+          type: string
+          example: "00000000"
+        contrasena:
+          type: string
+          format: password
+          example: admin123
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: jwt_token
+        usuario:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            nombre:
+              type: string
+              example: Administrador AgroStore
+            tipo:
+              $ref: "#/components/schemas/RolUsuario"
+            ubicacion:
+              type: string
+              nullable: true
+              example: La Esperanza
+            calificacion:
+              type: string
+              example: "5.0"
+
+    UsuarioPerfil:
+      type: object
+      properties:
+        id_usuario:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: Administrador AgroStore
+        telefono:
+          type: string
+          example: "00000000"
+        tipo:
+          $ref: "#/components/schemas/RolUsuario"
+        ubicacion:
+          type: string
+          nullable: true
+          example: La Esperanza
+        calificacion:
+          type: string
+          example: "5.0"
+
+    UsuarioAdmin:
+      allOf:
+        - $ref: "#/components/schemas/UsuarioPerfil"
+        - type: object
+          properties:
+            activo:
+              type: boolean
+              example: true
+            creado_en:
+              type: string
+              format: date-time
+              example: "2026-05-19T10:00:00.000Z"
+
+    ProductoRequest:
+      type: object
+      required:
+        - nombre
+        - cantidad_disponible
+        - precio
+        - categoria
+      properties:
+        nombre:
+          type: string
+          example: Tomate
+        descripcion:
+          type: string
+          nullable: true
+          example: Tomate fresco por libra
+        cantidad_disponible:
+          type: integer
+          minimum: 0
+          example: 50
+        precio:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 5
+        punto_entrega:
+          type: string
+          nullable: true
+          example: Mercado central
+        categoria:
+          $ref: "#/components/schemas/CategoriaProducto"
+
+    Producto:
+      type: object
+      properties:
+        id_producto:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: Tomate
+        descripcion:
+          type: string
+          nullable: true
+          example: Tomate fresco por libra
+        cantidad_disponible:
+          type: integer
+          example: 50
+        precio:
+          type: string
+          example: "5.00"
+        estado:
+          $ref: "#/components/schemas/EstadoProducto"
+        categoria:
+          $ref: "#/components/schemas/CategoriaProducto"
+        punto_entrega:
+          type: string
+          nullable: true
+          example: Mercado central
+        id_productor:
+          type: integer
+          example: 2
+        creado_en:
+          type: string
+          format: date-time
+          example: "2026-05-19T10:00:00.000Z"
+
+    ProductoConProductor:
+      allOf:
+        - $ref: "#/components/schemas/Producto"
+        - type: object
+          properties:
+            productor_nombre:
+              type: string
+              example: Juan Perez
+            productor_rating:
+              type: string
+              example: "5.0"
+            productor_ubicacion:
+              type: string
+              example: Quetzaltenango
+
+    MotivoRequest:
+      type: object
+      required:
+        - motivo
+      properties:
+        motivo:
+          type: string
+          example: Ya no necesito el producto.
+
+    PedidoComprador:
+      type: object
+      properties:
+        id_pedido:
+          type: integer
+          example: 1
+        fecha:
+          type: string
+          format: date
+          example: "2026-05-19"
+        estado:
+          $ref: "#/components/schemas/EstadoPedido"
+        motivo_cancelacion:
+          type: string
+          nullable: true
+          example: null
+        cantidad:
+          type: integer
+          example: 10
+        precio_unitario:
+          type: string
+          example: "5.00"
+        producto_nombre:
+          type: string
+          example: Tomate
+        categoria:
+          $ref: "#/components/schemas/CategoriaProducto"
+        punto_entrega:
+          type: string
+          nullable: true
+          example: Mercado central
+        productor_nombre:
+          type: string
+          example: Juan Perez
+        productor_telefono:
+          type: string
+          example: "55551234"
+
+    PedidoRecibido:
+      type: object
+      properties:
+        id_pedido:
+          type: integer
+          example: 1
+        fecha:
+          type: string
+          format: date
+          example: "2026-05-19"
+        estado:
+          $ref: "#/components/schemas/EstadoPedido"
+        cantidad:
+          type: integer
+          example: 10
+        precio_unitario:
+          type: string
+          example: "5.00"
+        producto_nombre:
+          type: string
+          example: Tomate
+        comprador_nombre:
+          type: string
+          example: Maria Lopez
+        comprador_telefono:
+          type: string
+          example: "55559876"
+
+    PedidoAdmin:
+      type: object
+      properties:
+        id_pedido:
+          type: integer
+          example: 1
+        fecha:
+          type: string
+          format: date
+          example: "2026-05-19"
+        estado:
+          $ref: "#/components/schemas/EstadoPedido"
+        motivo_cancelacion:
+          type: string
+          nullable: true
+          example: null
+        cantidad:
+          type: integer
+          example: 10
+        precio_unitario:
+          type: string
+          example: "5.00"
+        producto_nombre:
+          type: string
+          example: Tomate
+        categoria:
+          $ref: "#/components/schemas/CategoriaProducto"
+        comprador_nombre:
+          type: string
+          example: Maria Lopez
+        productor_nombre:
+          type: string
+          example: Juan Perez
+
+    EntregaRequest:
+      type: object
+      required:
+        - id_pedido
+        - lugar
+      properties:
+        id_pedido:
+          type: integer
+          example: 1
+        fecha_entrega:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-05-20"
+        lugar:
+          type: string
+          example: Mercado central
+        observaciones:
+          type: string
+          nullable: true
+          example: Entrega acordada por la tarde.
+
+    Entrega:
+      type: object
+      properties:
+        id_entrega:
+          type: integer
+          example: 1
+        fecha_entrega:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-05-20"
+        estado:
+          $ref: "#/components/schemas/EstadoEntrega"
+        lugar:
+          type: string
+          example: Mercado central
+        observaciones:
+          type: string
+          nullable: true
+          example: Entrega acordada por la tarde.
+        id_pedido:
+          type: integer
+          example: 1
+
+    EntregaProductor:
+      allOf:
+        - $ref: "#/components/schemas/Entrega"
+        - type: object
+          properties:
+            id_comprador:
+              type: integer
+              example: 3
+            cantidad:
+              type: integer
+              example: 10
+            producto_nombre:
+              type: string
+              example: Tomate
+            comprador_nombre:
+              type: string
+              example: Maria Lopez
+
+    EntregaComprador:
+      allOf:
+        - $ref: "#/components/schemas/Entrega"
+        - type: object
+          properties:
+            cantidad:
+              type: integer
+              example: 10
+            producto_nombre:
+              type: string
+              example: Tomate
+            productor_nombre:
+              type: string
+              example: Juan Perez
+
+    EntregaAdmin:
+      allOf:
+        - $ref: "#/components/schemas/Entrega"
+        - type: object
+          properties:
+            cantidad:
+              type: integer
+              example: 10
+            producto_nombre:
+              type: string
+              example: Tomate
+            comprador_nombre:
+              type: string
+              example: Maria Lopez
+            productor_nombre:
+              type: string
+              example: Juan Perez
+
+    Notificacion:
+      type: object
+      properties:
+        id_notificacion:
+          type: integer
+          example: 1
+        mensaje:
+          type: string
+          example: Nuevo Hortalizas: Tomate disponible en la tienda
+        leida:
+          type: boolean
+          example: false
+        fecha:
+          type: string
+          format: date-time
+          example: "2026-05-19T10:00:00.000Z"
+        id_usuario:
+          type: integer
+          example: 3
+
+    Incumplimiento:
+      type: object
+      properties:
+        id_incumplimiento:
+          type: integer
+          example: 1
+        descripcion:
+          type: string
+          example: El producto no fue entregado en el lugar acordado.
+        fecha:
+          type: string
+          format: date
+          example: "2026-05-19"
+        validado:
+          type: boolean
+          example: false
+        id_usuario:
+          type: integer
+          example: 3
+        id_pedido:
+          type: integer
+          example: 1
+        reportado_por:
+          type: string
+          example: Maria Lopez
+        tipo_reportador:
+          $ref: "#/components/schemas/RolUsuario"
+
+    ReporteVentas:
+      type: object
+      properties:
+        productor:
+          type: string
+          example: Juan Perez
+        total_ventas:
+          type: string
+          example: "5"
+        total_libras:
+          type: string
+          example: "120"
+        total_ingresos:
+          type: string
+          example: "600.00"
+
+    ReporteCategorias:
+      type: object
+      properties:
+        categoria:
+          $ref: "#/components/schemas/CategoriaProducto"
+        total_pedidos:
+          type: string
+          example: "8"
+        total_libras:
+          type: string
+          example: "200"
+        total_ingresos:
+          type: string
+          example: "950.00"
