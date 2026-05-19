@@ -38,7 +38,7 @@ function PantallaInicio({
         <p className="text-green-200 text-xs mb-1">● Conectado</p>
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-white text-2xl font-bold">La Esperanza</h1>
+            <h1 className="text-white text-2xl font-bold">Agrostore</h1>
             <p className="text-green-200 text-sm">
               Panel de Agricultor — {usuario.nombre}
             </p>
