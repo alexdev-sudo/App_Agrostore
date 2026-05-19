@@ -4,6 +4,33 @@ La API de AgroStore es una API REST desarrollada con Node.js, Express y PostgreS
 
 La documentación interactiva de la API fue implementada mediante Swagger/OpenAPI.
 
+## Documentación Interactiva con Swagger/OpenAPI
+
+La documentación interactiva fue implementada con Swagger/OpenAPI. Esta herramienta permite visualizar los endpoints disponibles, revisar parámetros de entrada y salida, consultar ejemplos de requests y responses, y probar solicitudes directamente desde el navegador.
+
+URL local de Swagger:
+
+```text
+http://localhost:3001/api-docs/
+```
+
+Archivo fuente de OpenAPI:
+
+```text
+docs/api/openapi.yaml
+```
+
+La configuración de Swagger se realizó en el backend mediante `swagger-ui-express` y `yamljs`, cargando el archivo `openapi.yaml` y exponiéndolo en la ruta `/api-docs`.
+
+## Observaciones
+
+- La API utiliza formato JSON para requests y responses.
+- Las rutas protegidas requieren token JWT.
+- Algunas rutas requieren roles específicos: `Administrador`, `Productor` o `Comprador`.
+- La documentación completa e interactiva se mantiene en `docs/api/openapi.yaml`.
+- Este archivo `endpoints.md` funciona como resumen legible para consulta técnica y apoyo al documento formal del proyecto.
+
+
 ## Accesos Principales
 
 | Recurso | URL |
@@ -537,28 +564,3 @@ Response 200:
 }
 ```
 
-## Documentación Interactiva con Swagger/OpenAPI
-
-La documentación interactiva fue implementada con Swagger/OpenAPI. Esta herramienta permite visualizar los endpoints disponibles, revisar parámetros de entrada y salida, consultar ejemplos de requests y responses, y probar solicitudes directamente desde el navegador.
-
-URL local de Swagger:
-
-```text
-http://localhost:3001/api-docs/
-```
-
-Archivo fuente de OpenAPI:
-
-```text
-docs/api/openapi.yaml
-```
-
-La configuración de Swagger se realizó en el backend mediante `swagger-ui-express` y `yamljs`, cargando el archivo `openapi.yaml` y exponiéndolo en la ruta `/api-docs`.
-
-## Observaciones
-
-- La API utiliza formato JSON para requests y responses.
-- Las rutas protegidas requieren token JWT.
-- Algunas rutas requieren roles específicos: `Administrador`, `Productor` o `Comprador`.
-- La documentación completa e interactiva se mantiene en `docs/api/openapi.yaml`.
-- Este archivo `endpoints.md` funciona como resumen legible para consulta técnica y apoyo al documento formal del proyecto.
