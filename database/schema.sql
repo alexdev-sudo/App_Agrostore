@@ -1,4 +1,4 @@
-//BD AgroStore - Esquema de base de datos sql para PostgreSQL
+--BD AgroStore - Esquema de base de datos sql para PostgreSQL
 
 CREATE TABLE usuario (
   id_usuario    SERIAL        PRIMARY KEY,
