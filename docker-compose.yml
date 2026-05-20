@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+
+  # ── Servicio 1: Base de datos PostgreSQL ─────────────────────────────
+  db:
+    image: postgres:16-alpine
+    # Usamos la imagen oficial de PostgreSQL. No necesitamos Dockerfile propio.
+    container_name: agrostore-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: agrostore2026
+      POSTGRES_DB: agrostore_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # db_data: volumen nombrado que persiste los datos en el disco del host.
+      # Sin esto, al detener el contenedor se pierden TODOS los datos.
+
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      # Este mapeo especial: PostgreSQL ejecuta automáticamente
+      # cualquier .sql que encuentre en /docker-entrypoint-initdb.d/
+      # la PRIMERA vez que arranca. Así las tablas se crean solas.
+    ports:
+      - "5432:5432"
+      # "puerto_host:puerto_contenedor"
+      # Permite conectarte a la BD desde pgAdmin o DBeaver en tu computadora
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      # El backend no arranca hasta que este healthcheck pase.
+      # Evita el error "conexión rechazada" cuando el backend arranca antes que la BD.
+
+  # ── Servicio 2: Backend Node.js ───────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      # context: carpeta donde está el Dockerfile del backend
+    container_name: agrostore-backend
+    environment:
+      DB_HOST: db
+      # IMPORTANTE: aquí va "db" (el nombre del servicio de arriba), NO "localhost".
+      # Docker Compose crea una red interna donde los servicios se comunican por nombre.
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: agrostore2026
+      DB_NAME: agrostore_db
+      JWT_SECRET: agrostore_clave_secreta_muy_larga_2026_guatemala
+      PORT: 3001
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./docs:/docs:ro  
+    depends_on:
+      db:
+        condition: service_healthy
+        # El backend NO inicia hasta que la BD pase el healthcheck
+
+  # ── Servicio 3: Frontend React ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+    container_name: agrostore-frontend
+    ports:
+      - "5173:80"
+      # Puerto 5173 del host → Puerto 80 del contenedor Nginx
+    depends_on:
+      - backend
+
+# ── Volúmenes nombrados ───────────────────────────────────────────────────
+volumes:
+  db_data:
+  # Docker gestiona este volumen en el disco de tu computadora.
+  # Los datos de PostgreSQL sobreviven aunque detengas y elimines el contenedor.

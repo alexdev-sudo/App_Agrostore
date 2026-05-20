@@ -1,0 +1,9 @@
+node_modules
+# Se instala dentro del contenedor, no se copia desde el host
+
+.env
+# Las variables secretas van como parámetros en docker-compose, no en la imagen
+
+.env.local
+*.log
+README.md
