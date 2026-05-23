@@ -23,6 +23,16 @@ app.use(cors({
 }));
 
 app.use(express.json());
+// configuracion de la documentacion API con swagger mediante un archivo YAML 
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path = require('path');
+// cargar  y transforar el archivo de especificacion  OpenApi (YAML) a un objeto javascript
+const swaggerDocument = YAML.load(
+  path.join(__dirname, '../../docs/api/openapi.yaml')
+);
+// Crea el endpoint publico /api-docs para renderizar la documentacion interactiva 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use('/api/auth',           require('./routes/auth'));
 app.use('/api/productos',      require('./routes/productos'));
