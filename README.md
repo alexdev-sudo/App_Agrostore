@@ -173,9 +173,9 @@ Cuando se ejecuta manualmente, deben colocarse en `backend/.env`.
 | `DB_HOST` | Host de PostgreSQL | `db` en Docker, `localhost` local |
 | `DB_PORT` | Puerto de PostgreSQL | `5432` |
 | `DB_USER` | Usuario de base de datos | `postgres` |
-| `DB_PASSWORD` | Contrasena de base de datos | `agrostore2026` |
+| `DB_PASSWORD` | Contrasena de base de datos | `XXXXXX` |
 | `DB_NAME` | Nombre de la base de datos | `agrostore_db` |
-| `JWT_SECRET` | Clave secreta para firmar tokens JWT | `agrostore_clave_secreta_muy_larga_2026_guatemala` |
+| `JWT_SECRET` | Clave secreta para firmar tokens JWT | `XXXXXXXXXXXXXXX_XXXXXXXXXXXX_XXXXXXXXXXXXXXXX` |
 | `PORT` | Puerto del backend | `3001` |
 | `NODE_ENV` | Entorno de ejecucion | `development` |
 | `FRONTEND_URL` | URL permitida para CORS | `http://localhost:5173` |
