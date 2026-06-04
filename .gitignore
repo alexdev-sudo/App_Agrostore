@@ -26,3 +26,10 @@ Desktop.ini
 
 # Docker volúmenes locales
 .docker/
+# graphift data  - local knowledge 
+graphify-out/
+.graphify_cache/
+.graphifyignore
+
+
+
