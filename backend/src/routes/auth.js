@@ -61,64 +61,87 @@ try {
 });
 
 // POST /api/auth/login
-//incia sesion y devuelve un token jwt
-router.post('/login',async (req,res) => {
-const {telefono,contrasena} = req.body;
+// inicia sesion y devuelve un token jwt
+router.post('/login', async (req, res) => {
+    const { telefono, contrasena } = req.body;
 
-if (!telefono || !contrasena) {
-    return res.status(400).json({
-        error: 'Telefono y contrasena son obligatorios'});
-}
-
-try{
-    const result = await db.query(
-        'SELECT * FROM usuario WHERE telefono = $1 AND activo = true',
-        [telefono]
-    );
-    if(result.rows.length === 0 ){
-        return res.status(401).json({
-            error: 'No encontramos una cuenta con ese numero de telefono'
+    if (!telefono || !contrasena) {
+        return res.status(400).json({
+            error: 'Telefono y contrasena son obligatorios'
         });
     }
 
-    const usuario = result.rows[0]; // {id_usuario, nombre, tipo, contrasena: hash}
+    try {
+        const result = await db.query(
+            'SELECT * FROM usuario WHERE telefono = $1 AND activo = true',
+            [telefono]
+        );
 
-    //bcrypt.compare COMPARA ;"1234" con el hash guardad en la DB
-    //devuelve true si coniciden, false si no
-    const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
-    if (!contrasenaValida) {
-        return res.status(401).json({
-            error: 'Contrasena Incorrecta' });
-}
-// creamos el token con los datos minimos necesarios
-//Nunca incluimos la contresena en el token
+        if (result.rows.length === 0) {
+            return res.status(401).json({
+                error: 'No encontramos una cuenta con ese numero de telefono'
+            });
+        }
 
-const token = jwt.sign(
-    {
-        id: usuario.id_usuario,
-        nombre: usuario.nombre,
-        tipo: usuario.tipo
-    },
-    process.env.JWT_SECRET,
-    {expiresIn: '7d'} // el token dura 7 dias 
-);
-res.json({
-    token, 
-    usuario: {
-        id: usuario.id_usuario,
-        nombre: usuario.nombre,
-        tipo: usuario.tipo,
-        ubicacion: usuario.ubicacion,
-        calificacion: usuario.calificacion
+        const usuario = result.rows[0];
+
+        const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
+        if (!contrasenaValida) {
+            return res.status(401).json({
+                error: 'Contrasena Incorrecta'
+            });
+        }
+
+        // Obtener roles del usuario desde la tabla usuario_rol
+        const { rows: roleRows } = await db.query(
+            `
+      SELECT r.nombre
+      FROM rol r
+      JOIN usuario_rol ur ON ur.id_rol = r.id_rol
+      WHERE ur.id_usuario = $1
+      `,
+            [usuario.id_usuario]
+        );
+
+        const roles = roleRows.map(row => row.nombre);
+
+        // Compatibilidad: si no hay roles en usuario_rol, usar el tipo de usuario
+        if (roles.length === 0 && usuario.tipo) {
+            roles.push(usuario.tipo);
+        }
+
+        // Crear payload del JWT
+        const tokenPayload = {
+            id: usuario.id_usuario,
+            nombre: usuario.nombre,
+            roles,
+            tipo: usuario.tipo
+        };
+
+        // Firmar token
+        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+            expiresIn: '1d'
+        });
+
+        // Responder con token y datos del usuario
+        res.json({
+            token,
+            usuario: {
+                id: usuario.id_usuario,
+                nombre: usuario.nombre,
+                tipo: usuario.tipo,
+                ubicacion: usuario.ubicacion,
+                calificacion: usuario.calificacion
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: 'Error del servicio'
+        });
     }
 });
-}catch(err){
-    console.error(err);
-    res.status(500).json({
-        error: 'Error del servicio'});
-}
-});
-
 // GET /api/auth/perfil - datos del usuariologueado
 router.get('/perfil', verificarToken, async(req, res) => {
     const result = await db.query(

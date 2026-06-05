@@ -3,20 +3,25 @@ import { api } from '../services/api';
 
 export default function Buzon({ onLeer }) {
   const [notificaciones, setNotificaciones] = useState([]);
-  const [cargando, setCargando]             = useState(true);
+  const [cargando, setCargando] = useState(true);
 
-  useEffect(() => { cargar(); }, []);
+  // Declarar la función ANTES del useEffect
+  //  Memorizar la función con useCallback
+  // Función DENTRO del efecto
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const data = await api.getNotificaciones();
+        setNotificaciones(data);
+      } catch (err) {
+        console.error(err.message);
+      } finally {
+        setCargando(false);
+      }
+    };
 
-  const cargar = async () => {
-    try {
-      const data = await api.getNotificaciones();
-      setNotificaciones(data);
-    } catch (err) {
-      console.error(err.message);
-    } finally {
-      setCargando(false);
-    }
-  };
+    cargar();
+  }, []); // Sin dependencias, ejecutar solo al montar
 
   const leerTodas = async () => {
     try {

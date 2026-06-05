@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 
 export default function PedidosRecibidos() {
-  const [pedidos, setPedidos]   = useState([]);
+  const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [mensaje,  setMensaje]  = useState('');
+  const [mensaje, setMensaje] = useState('');
 
-  useEffect(() => { cargar(); }, []);
-
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
     try {
       const data = await api.pedidosRecibidos();
       setPedidos(data);
@@ -17,7 +15,11 @@ export default function PedidosRecibidos() {
     } finally {
       setCargando(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   const aceptar = async (id) => {
     try {
@@ -41,11 +43,41 @@ export default function PedidosRecibidos() {
     }
   };
 
+  const registrarEntrega = async (id_pedido) => {
+    try {
+      const lugar = prompt('Lugar de entrega (ej: mercado cantonal):');
+      if (!lugar) return;
+
+      const fecha_entrega = prompt('Fecha de entrega (YYYY-MM-DD) — opcional (enter para omitir):') || null;
+      const observaciones = prompt('Observaciones (opcional):') || null;
+
+      const res = await api.registrarEntrega({
+        id_pedido,
+        fecha_entrega: fecha_entrega || null,
+        lugar,
+        observaciones: observaciones || null
+      });
+
+      const entrega = res.entrega;
+      if (!entrega || !entrega.id_entrega) {
+        setMensaje('Error: no se pudo crear la entrega');
+        return;
+      }
+
+      await api.confirmarEntrega(entrega.id_entrega);
+
+      setMensaje('Entrega registrada y confirmada. El comprador será notificado.');
+      cargar();
+    } catch (err) {
+      setMensaje(err.message || 'Error al registrar la entrega');
+    }
+  };
+
   const colorEstado = {
-    Pendiente:  'bg-amber-50 text-amber-700',
-    Aceptado:   'bg-verde-claro text-verde',
-    Rechazado:  'bg-red-50 text-red-600',
-    Cancelado:  'bg-gray-100 text-gray-500',
+    Pendiente: 'bg-amber-50 text-amber-700',
+    Aceptado: 'bg-verde-claro text-verde',
+    Rechazado: 'bg-red-50 text-red-600',
+    Cancelado: 'bg-gray-100 text-gray-500',
     Finalizado: 'bg-blue-50 text-blue-600',
   };
 
@@ -72,7 +104,6 @@ export default function PedidosRecibidos() {
       ) : (
         pedidos.map(pedido => (
           <div key={pedido.id_pedido} className="mx-4 mt-3 bg-white rounded-xl border border-gray-100 overflow-hidden">
-            {/* Header de la tarjeta */}
             <div className="bg-verde-osc px-4 py-2 flex justify-between items-center">
               <span className="text-white text-sm font-bold">{pedido.producto_nombre} — {pedido.cantidad} lb</span>
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colorEstado[pedido.estado]}`}>
@@ -80,7 +111,6 @@ export default function PedidosRecibidos() {
               </span>
             </div>
 
-            {/* Detalles */}
             <div className="p-4">
               <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                 <div>
@@ -103,7 +133,6 @@ export default function PedidosRecibidos() {
                 </div>
               </div>
 
-              {/* Botones solo si está Pendiente */}
               {pedido.estado === 'Pendiente' && (
                 <div className="flex gap-2 mt-2">
                   <button
@@ -117,6 +146,16 @@ export default function PedidosRecibidos() {
                     className="flex-1 border border-red-300 text-red-500 rounded-xl py-2 font-bold text-sm"
                   >
                     ✗ Rechazar
+                  </button>
+                </div>
+              )}
+              {pedido.estado === 'Aceptado' && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => registrarEntrega(pedido.id_pedido)}
+                    className="w-full bg-verde text-white rounded-xl py-2 font-bold text-sm"
+                  >
+                    📦 Registrar entrega
                   </button>
                 </div>
               )}

@@ -6,6 +6,7 @@ npm-debug.log*
 .env
 .env.local
 .env.production
+.env.test
 
 # Archivos compilados del frontend
 frontend/dist/
@@ -25,3 +26,10 @@ Desktop.ini
 
 # Docker volúmenes locales
 .docker/
+# graphift data  - local knowledge 
+graphify-out/
+.graphify_cache/
+.graphifyignore
+
+
+
