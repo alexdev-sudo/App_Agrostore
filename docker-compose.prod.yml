@@ -25,6 +25,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
+      DB_SSL: ${DB_SSL:-false}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3001
       NODE_ENV: production
