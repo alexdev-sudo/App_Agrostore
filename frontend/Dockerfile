@@ -10,6 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # npm run build compila todo React en archivos estáticos en la carpeta dist/
 # El resultado es HTML + CSS + JS optimizado para producción
@@ -22,6 +24,7 @@ FROM nginx:alpine
 
 # Copia la carpeta dist/ de la etapa "builder" al directorio que Nginx sirve
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
