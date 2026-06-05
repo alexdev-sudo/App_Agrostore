@@ -51,8 +51,8 @@ router.post('/', verificarToken, verificarRol('Comprador'), async (req, res) => 
 
     // Notificar al productor que llegó un pedido
     await conn.query(
-      'INSERT INTO notificacion (mensaje, id_usuario) VALUES ($1, $2)',
-      [`Nueva solicitud: ${cantidad} lb de ${producto.nombre}`, producto.id_productor]
+      'INSERT INTO notificacion (mensaje, id_usuario, id_pedido) VALUES ($1, $2, $3)',
+      [`Nueva solicitud: ${cantidad} lb de ${producto.nombre}`, producto.id_productor, id_pedido]
     );
 
     await conn.query('COMMIT');
@@ -131,8 +131,8 @@ router.patch('/:id/aceptar', verificarToken, verificarRol('Productor'), async (r
 
   // Notificar al comprador
   await db.query(
-    'INSERT INTO notificacion (mensaje, id_usuario) VALUES ($1, $2)',
-    [`Tu pedido #${req.params.id} fue aceptado`, verificacion.rows[0].id_comprador]
+    'INSERT INTO notificacion (mensaje, id_usuario, id_pedido) VALUES ($1, $2, $3)',
+    [`Tu pedido #${req.params.id} fue aceptado`, verificacion.rows[0].id_comprador, req.params.id]
   );
 
   res.json({ mensaje: 'Pedido aceptado' });
@@ -167,8 +167,8 @@ router.patch('/:id/rechazar', verificarToken, verificarRol('Productor'), async (
   );
 
   await db.query(
-    'INSERT INTO notificacion (mensaje, id_usuario) VALUES ($1, $2)',
-    [`Tu pedido #${req.params.id} fue rechazado. Motivo: ${motivo}`, verificacion.rows[0].id_comprador]
+    'INSERT INTO notificacion (mensaje, id_usuario, id_pedido) VALUES ($1, $2, $3)',
+    [`Tu pedido #${req.params.id} fue rechazado. Motivo: ${motivo}`, verificacion.rows[0].id_comprador, req.params.id]
   );
 
   res.json({ mensaje: 'Pedido rechazado' });

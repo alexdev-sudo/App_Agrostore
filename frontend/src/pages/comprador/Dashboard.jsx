@@ -15,23 +15,33 @@ export default function DashboardComprador() {
   const [notificaciones, setNotificaciones] = useState(0);
   const [cargando, setCargando]             = useState(true);
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    let activo = true;
 
-  const cargar = async () => {
-    try {
-      const [pedidos, notifs] = await Promise.all([
-        api.misPedidos(),
-        api.getNotificaciones()
-      ]);
-      setMisPedidos(pedidos);
-      setNotificaciones(notifs.filter(n => !n.leida).length);
-    } catch (err) {
-      console.error(err.message);
-    } finally {
-      setCargando(false);
-    }
-  };
+    const cargar = async () => {
+      try {
+        const [pedidos, notifs] = await Promise.all([
+          api.misPedidos(),
+          api.getNotificaciones()
+        ]);
 
+        if (!activo) return;
+
+        setMisPedidos(pedidos);
+        setNotificaciones(notifs.filter(n => !n.leida).length);
+      } catch (err) {
+        console.error(err.message);
+      } finally {
+        if (activo) setCargando(false);
+      }
+    };
+
+    cargar();
+
+    return () => {
+      activo = false;
+    };
+  }, []);
   const PantallaInicio = () => (
     <div className="pb-20">
       <div className="bg-verde px-4 pt-8 pb-4">
@@ -118,7 +128,7 @@ export default function DashboardComprador() {
     <div className="max-w-sm mx-auto min-h-screen bg-crema relative">
       {tab === 'inicio'    && <PantallaInicio />}
       {tab === 'tienda'    && <Tienda />}
-      {tab === 'entregas'  && <MisPedidos />}
+      {tab === 'entregas'  && <EntregasComp />}
       {tab === 'buzon'     && <Buzon onLeer={() => setNotificaciones(0)} />}
       {tab === 'historial' && <HistorialComp />}
 
