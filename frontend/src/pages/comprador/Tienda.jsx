@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+
 import { api } from '../../services/api';
+import { useState, useEffect } from 'react';
 
 export default function Tienda() {
   const [productos,   setProductos]   = useState([]);
@@ -11,6 +12,7 @@ export default function Tienda() {
   const [cantidad,    setCantidad]    = useState(1);
   const [mensaje,     setMensaje]     = useState('');
 
+  // Efecto 1: Cargar datos iniciales (solo una vez)
   useEffect(() => {
     Promise.all([api.getCategorias(), api.getProductos()])
       .then(([cats, prods]) => { setCategorias(cats); setProductos(prods); })
@@ -18,23 +20,36 @@ export default function Tienda() {
       .finally(() => setCargando(false));
   }, []);
 
-  const buscar = async () => {
-    setCargando(true);
-    try {
-      const filtros = {};
-      if (busqueda)   filtros.nombre    = busqueda;
-      if (catActiva)  filtros.categoria = catActiva;
-      const data = await api.getProductos(filtros);
-      setProductos(data);
-    } catch (err) {
-      console.error(err.message);
-    } finally {
-      setCargando(false);
-    }
-  };
+  // Memorizar la función con useCallback
+  // ✅ Efecto 1: Cargar productos iniciales
+  useEffect(() => {
+    Promise.all([api.getCategorias(), api.getProductos()])
+      .then(([cats, prods]) => { setCategorias(cats); setProductos(prods); })
+      .catch(console.error)
+      .finally(() => setCargando(false));
+  }, []);
 
-  // Buscar cuando cambia la búsqueda o categoría
-  useEffect(() => { buscar(); }, [busqueda, catActiva]);
+  // Efecto 2: Buscar cuando filtros cambian
+  useEffect(() => {
+    const buscar = async () => {
+      setCargando(true);
+      try {
+        const filtros = {};
+        if (busqueda) filtros.nombre = busqueda;
+        if (catActiva) filtros.categoria = catActiva;
+        const data = await api.getProductos(filtros);
+        setProductos(data);
+      } catch (err) {
+        console.error(err.message);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    if (busqueda || catActiva) {
+      buscar();
+    }
+  }, [busqueda, catActiva]); // Dependencias que DISPARAN el efecto
 
   const hacerPedido = async () => {
     try {
@@ -153,8 +168,8 @@ export default function Tienda() {
 
       {/* Modal para hacer pedido */}
       {pedidoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full max-w-sm mx-auto rounded-t-2xl p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-lg text-gray-800 mb-1">{pedidoModal.nombre}</h3>
             <p className="text-verde font-bold text-xl mb-4">
               Q{parseFloat(pedidoModal.precio).toFixed(2)}/lb
@@ -194,7 +209,6 @@ export default function Tienda() {
             </button>
           </div>
         </div>
-      )}
-    </div>
+      )}   </div>
   );
 }

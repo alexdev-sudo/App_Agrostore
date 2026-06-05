@@ -92,7 +92,8 @@ CREATE TABLE notificacion (
   mensaje         TEXT      NOT NULL,
   leida           BOOLEAN   DEFAULT FALSE,
   fecha           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  id_usuario  INT NOT NULL  REFERENCES usuario(id_usuario) ON DELETE CASCADE
+  id_usuario  INT NOT NULL  REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+  id_pedido INT NULL  REFERENCES pedido(id_pedido) ON DELETE SET NULL
 );
 
 CREATE TABLE reporte (
@@ -111,4 +112,42 @@ VALUES (
   'Administrador',
   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
   'La Esperanza'
+);
+
+-- 1) catalago de roles 
+CREATE TABLE IF NOT EXISTS rol(
+  id_rol SERIAL PRIMARY KEY, 
+  nombre VARCHAR(50) NOT NULL UNIQUE,
+  descripcion TEXT, 
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2) tabla pivote usuario_rol (M:N)
+CREATE TABLE IF NOT EXISTS usuario_rol(
+  id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE, 
+  id_rol INT NOT NULL REFERENCES rol(id_rol) ON DELETE CASCADE, 
+  asignado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+  PRIMARY KEY (id_usuario, id_rol)
+);
+
+-- 3) Insertar catálogo base si no existe
+INSERT INTO rol (nombre, descripcion)
+SELECT 'Productor', 'Usuario que vende productos'
+WHERE NOT EXISTS (SELECT 1 FROM rol WHERE nombre = 'Productor');
+
+INSERT INTO rol (nombre, descripcion)
+SELECT 'Comprador', 'Usuario que compra productos'
+WHERE NOT EXISTS (SELECT 1 FROM rol WHERE nombre = 'Comprador');
+
+INSERT INTO rol (nombre, descripcion)
+SELECT 'Administrador', 'Usuario con privilegios administrativos'
+WHERE NOT EXISTS (SELECT 1 FROM rol WHERE nombre = 'Administrador');
+
+-- 4) Mapear usuarios existentes (columna tipo) hacia usuario_rol
+INSERT INTO usuario_rol (id_usuario, id_rol)
+SELECT u.id_usuario, r.id_rol
+FROM usuario u
+JOIN rol r ON r.nombre = u.tipo
+WHERE NOT EXISTS (
+  SELECT 1 FROM usuario_rol ur WHERE ur.id_usuario = u.id_usuario AND ur.id_rol = r.id_rol
 );
