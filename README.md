@@ -5,11 +5,11 @@ Facultad de Ingenieria en Sistemas | Analisis de Sistemas I
 
 ## Equipo
 
-| Nombre | Carne | Rol |
+| Nombre |  Rol |
 |---|---|---|
-| Cinthia Yadira Robles Sotoj | 7690-16-13986 | Product Owner |
-| Ezequiel Alexander Castro | 7690-21-7934 | Scrum Team |
-| Madelin Velvet Mendoza Bedoya | 7690-22-4338 | Scrum Master |
+| Cinthia Yadira Robles Sotoj | Product Owner |
+| Ezequiel Alexander Castro | Scrum Team |
+| Madelin Velvet Mendoza Bedoya | Scrum Master |
 
 ## Descripcion General
 
